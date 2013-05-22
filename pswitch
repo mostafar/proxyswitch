@@ -1,0 +1,44 @@
+#!/usr/bin/python
+
+import sys, json, os
+
+CONFIGS_LOCATION = '/etc/pswitch/'
+ACTIVE_LOCATION = os.path.join(CONFIGS_LOCATION, 'active')
+
+if (len(sys.argv) != 2):
+    print "     Gnome 3 Proxy Switcher"
+    print "  Usage: %s PROXY_CONFIG_FILE" % (sys.argv[0])
+    print
+    sys.exit(1)
+
+config_file = sys.argv[1]
+config_file_path = os.path.join(CONFIGS_LOCATION, config_file)
+
+os.system('mv %s/* %s' % (ACTIVE_LOCATION, CONFIGS_LOCATION))
+os.system('mv %s %s/' % (config_file_path, ACTIVE_LOCATION))
+
+config_file_path = os.path.join(ACTIVE_LOCATION, config_file)
+try:
+    with open(config_file_path, 'r') as f:
+        config_string = f.read()
+        config = json.loads(config_string)
+
+        settings = []
+        prefix = "org.gnome.system.proxy"
+
+        for root_key, root_value in config.items():
+            if isinstance(root_value, dict):
+                for key, value in root_value.items():
+                    settings.append(prefix + '.' + root_key + ' ' + key + ' ' + str(value))
+            else:
+                settings.append(prefix + ' ' + root_key + ' ' + str(root_value).lower())
+
+        for setting in settings:
+            print "Going to set", setting, "...",
+            err = os.system('gsettings set ' + setting + " > /dev/null 2>&1")
+            if err:
+                print "Error."
+            else:
+                print "Done."
+except:
+    print "No proxy config found."
